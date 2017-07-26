@@ -3,7 +3,6 @@ kind: Service
 metadata:
   labels:
     app: etcd-etcd-stateful
-    qihoo-app: etcd
   name: etcd-etcd-stateful
   namespace: default
 spec:
