@@ -86,8 +86,8 @@ spec:
               collect_member &
 
               exec etcd --name ${HOSTNAME} \
-                  --listen-peer-urls http://${HOSTNAME}.${SET_NAME}:2380 \
-                  --listen-client-urls http://${HOSTNAME}.${SET_NAME}:2379,http://127.0.0.1:2379 \
+                  --listen-peer-urls http://0.0.0.0:2380 \
+                  --listen-client-urls http://0.0.0.0:2379 \
                   --advertise-client-urls http://${HOSTNAME}.${SET_NAME}:2379 \
                   --data-dir /var/run/etcd/default.etcd \
                   --initial-advertise-peer-urls http://${HOSTNAME}.${SET_NAME}:2380 \
@@ -109,8 +109,8 @@ spec:
           # join member
           exec etcd --name ${HOSTNAME} \
               --initial-advertise-peer-urls http://${HOSTNAME}.${SET_NAME}:2380 \
-              --listen-peer-urls http://${HOSTNAME}.${SET_NAME}:2380 \
-              --listen-client-urls http://${HOSTNAME}.${SET_NAME}:2379,http://127.0.0.1:2379 \
+              --listen-peer-urls http://0.0.0.0:2380 \
+              --listen-client-urls http://0.0.0.0:2379 \
               --advertise-client-urls http://${HOSTNAME}.${SET_NAME}:2379 \
               --initial-cluster-token etcd-cluster-1 \
               --initial-cluster $(initial_peers) \
@@ -123,9 +123,7 @@ spec:
           value: etcd-etcd-stateful
         - name: GOMAXPROCS
           value: "8"
-        - name: ETCD_LOG_PACKAGE_LEVELS
-          value: etcdserver/api/v2http=DEBUG
-        image: etcd:v3.1.4
+        image: etcd:v3.3.4
         imagePullPolicy: Always
         lifecycle:
           preStop:
