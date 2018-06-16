@@ -319,7 +319,7 @@ kubectl scale --replicas=5 statefulset infra-etcd-cluster
 ```
 然后某一天我发现五个节点对我来说有些浪费，想使用三个节点。OK，只需要执行以下命令即可，
 ``` sh
-kubectl scale --replicas=5 statefulset infra-etcd-cluster
+kubectl scale --replicas=3 statefulset infra-etcd-cluster
 ```
 
 > 所有的源码均可以在我的[github](https://github.com/wilhelmguo/etcd-statefulset)中找到，如果感觉本文对你有用，请在Github上点下Star。如果发现任何问题可以提交PR，一起为开源做贡献。
