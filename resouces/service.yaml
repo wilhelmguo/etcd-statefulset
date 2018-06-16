@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    k8s-app: infra-etcd-cluster
+    app: infra-etcd
+  name: infra-etcd-cluster
+  namespace: default
+spec:
+  clusterIP: None
+  ports:
+  - name: infra-etcd-cluster-2379
+    port: 2379
+    protocol: TCP
+    targetPort: 2379
+  - name: infra-etcd-cluster-2380
+    port: 2380
+    protocol: TCP
+    targetPort: 2380
+  selector:
+    k8s-app: infra-etcd-cluster
+    app: infra-etcd
+  type: ClusterIP
