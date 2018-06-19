@@ -1,18 +1,7 @@
 ![](https://wilhelmguo.tk/api/file/getImage?fileId=5b24c7aeaddba4075b00000c)
 
-随着微服务架构的火爆，Etcd作为服务发现或者分部署存储的基础平台也越来越频繁的出现在我们的视野里。因此对于快速部署一套稳定高可用的Etcd集群的需求也越来越强烈，本次就带领大家一起使用Kubernetes的Statefulset特性快速部署一套Etcd集群。
+随着微服务架构的火爆，Etcd作为服务发现或者分部式存储的基础平台也越来越频繁的出现在我们的视野里。因此对于快速部署一套高可用的Etcd集群的需求也越来越强烈，本次就带领大家一起使用Kubernetes的Statefulset特性快速部署一套Etcd集群。
 
-## 什么是Etcd？
-Etcd的目的是提供一个分布式键值动态数据库,维护一个“configuration registry”。
-这个registry的基础之一是Kubernetes集群发现和集中的配置管理。
-它在某些方面类似于Redis,经典的LDAP配置后端以及Windows注册表。
-
-Etcd的目标是：
-
-- 简单：定义良好，面向用户的API（JSON and gRPC）
-- 安全：自动TLS和可选的客户端证书身份验证
-- 快速：benchmarked 写 10,000 次/秒
-- 可靠：使用Raft协议作为分布式基础
 ## 什么是Kubernetes？
 Kubernetes 是一个用于容器集群的自动化部署、扩容以及运维的开源平台。
 
@@ -23,11 +12,31 @@ Kubernetes 是一个用于容器集群的自动化部署、扩容以及运维的
 - 无缝地发布新特性。
 - 仅使用需要的资源以优化硬件使用。
 
+## 什么是Etcd？
+Etcd的目的是提供一个分布式键值动态数据库,维护一个"Configuration Registry"。
+这个Registry的基础之一是Kubernetes集群发现和集中的配置管理。
+它在某些方面类似于Redis,经典的LDAP配置后端以及Windows注册表。
+
+Etcd的目标是：
+
+- 简单：定义良好，面向用户的API（JSON and gRPC）
+- 安全：自动TLS和可选的客户端证书身份验证
+- 快速：benchmarked 写 10,000 次/秒
+- 可靠：使用Raft协议作为分布式基础
+
 ## 官方已经有了Etcd-Operator,我为什么还要使用这种方式部署？
-- 首先官方的部署方式对Etcd版本和Kubernetes版本都有要求。
+
+**首先来看优点：**
+
+- Etcd-Operator的部署方式对Etcd版本和Kubernetes版本都有要求,详见[官方文档](https://github.com/coreos/etcd-operator)。
 - 如果使用Etcd v2 Api则无法对数据进行备份，官方的Etcd集群数据备份仅仅支持Etcd v3版本
-- Statefulset部署Etcd数据更加可靠。如果使用Operator部署Etcd，不幸的是某天我的Kubernetes集群出现了问题，导致所有的Etcd Pod出现故障，那么很遗憾，如果没有对数据进行备份，我只能Pray God bless不要背锅。即便我使用Etcd V3 Api并且使用了数据备份，那么也可能丢失一部分数据，因为官方的备份是定时备份的。
-- Statefulset的配置更加灵活，比如我需要亲和性的配置，可以直接在Statefulset中增加即可。
+- Statefulset部署Etcd数据更加可靠。如果使用Etcd-Operator部署Etcd，不幸的是某天我的Kubernetes集群出现了问题，导致所有的Etcd Pod出现故障，那么很遗憾，如果没有对数据进行备份，我只能Pray God Bless，祈求自己不要背锅。即便使用Etcd V3 Api并且使用了数据备份，那么也可能丢失一部分数据，因为Etcd-Operator的备份是定时备份的。
+- Statefulset的配置更加灵活，比如需要亲和性的配置，可以直接在Statefulset中增加即可。
+
+**当然，任何美好的事务都不是完美的**。
+使用Statefulset部署Etcd也需要一定的条件：
+- 必须有可靠的网络存储作为支持。
+- 创建集群比Etcd-Operator略微繁琐。
 
 好，接下来，让我们进入正题：
 ## 如何在Kubernetes上快速部署一套Etcd集群。
@@ -277,6 +286,9 @@ spec:
           k8s.cloud/storage-type: ceph-rbd
 
 ```
+
+> 注意：SET_NAME必须与Statefulset的Name一致
+
 这个时候你的Etcd已经可以在内部通过
 ``` sh 
 http://${SET_NAME}-${i}.${SET_NAME}.${CLUSTER_NAMESPACE}:2379
@@ -285,7 +297,7 @@ http://${SET_NAME}-${i}.${SET_NAME}.${CLUSTER_NAMESPACE}:2379
 
 最后一步：创建Client Service
 
-> 如果你的Etcd Pod可以从Kubernetes外部访问，或者你的Etcd 集群只需要在Kubernetes集群内部访问，可以省略该步骤
+> 如果你的集群网络方案使Pod可以从Kubernetes集群外部访问，或者你的Etcd 集群只需要在Kubernetes集群内部访问，可以省略该步骤
 
 ``` yaml
 apiVersion: v1
@@ -310,18 +322,23 @@ spec:
 
 ```
 
-大功告成，你可以使用NodePort顺利访问到Etcd集群。
+大功告成！你可以使用NodePort顺利访问到Etcd集群。
 
 ## 扩容与缩容
+
+###扩容
+
 只需要将Statefulset中的replicas改变即可。例如，我想把集群数量扩容为5个。
+
 ``` sh
 kubectl scale --replicas=5 statefulset infra-etcd-cluster
 ```
+
+### 缩容
+
 然后某一天我发现五个节点对我来说有些浪费，想使用三个节点。OK，只需要执行以下命令即可，
 ``` sh
 kubectl scale --replicas=3 statefulset infra-etcd-cluster
 ```
-
-> 所有的源码均可以在我的[github](https://github.com/wilhelmguo/etcd-statefulset)中找到，如果感觉本文对你有用，请在Github上点下Star。如果发现任何问题可以提交PR，一起为开源做贡献。
 
 ![](https://wilhelmguo.tk/api/file/getImage?fileId=5b24d554addba4075b00000d)
